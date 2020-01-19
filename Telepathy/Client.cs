@@ -91,13 +91,15 @@ namespace Telepathy
                 Logger.LogError("Client Recv Exception: " + exception);
             }
 
-            // sendthread might be waiting on ManualResetEvent,
-            // so let's make sure to end it if the connection
-            // closed.
-            // otherwise the send thread would only end if it's
-            // actually sending data while the connection is
-            // closed.
-            sendThread?.Interrupt();
+            // SendThread might be waiting on ManualResetEvent.
+            // call .Set() to interrupt the WaitOne()
+            sendPending.Set(); // interrupt SendThread WaitOne()
+
+            // now wait until the thread finished gracefully
+            // => it's not blocking on socket because we closed it
+            // => it's not blocking on ManualResetEvent because we set it
+            // so it will end.
+            sendThread?.Join();
 
             // Connect might have failed. thread might have been closed.
             // let's reset connecting state no matter what.
